@@ -3,28 +3,87 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tower of Hanoi - Drag & Drop (60s Challenge)</title>
+  <title>Arcesium Tower of Hanoi</title>
   <style>
-    body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
-    h1 { margin: 10px; }
-    #game { display: flex; gap: 30px; margin: 20px; }
-    .peg { width: 100px; height: 250px; background: #eee; display: flex; flex-direction: column-reverse; align-items: center; border: 2px solid #888; border-radius: 6px; padding: 10px; }
-    .disk { height: 20px; margin: 3px 0; background: steelblue; border-radius: 5px; cursor: grab; }
+    body {
+      font-family: sans-serif;
+      background: #f8fcff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #007aff;
+    }
+    h1 {
+      margin: 10px;
+      text-align: center;
+    }
+    #logo {
+      margin-top: 20px;
+      height: 60px;
+    }
+    #game {
+      display: flex;
+      gap: 30px;
+      margin: 20px;
+      touch-action: none;
+    }
+    .peg {
+      width: 100px;
+      height: 250px;
+      background: #e6f0ff;
+      display: flex;
+      flex-direction: column-reverse;
+      align-items: center;
+      border: 2px solid #007aff;
+      border-radius: 8px;
+      padding: 10px;
+    }
+    .disk {
+      height: 20px;
+      margin: 3px 0;
+      background: #007aff;
+      border-radius: 5px;
+      cursor: grab;
+      touch-action: none;
+    }
     .disk1 { width: 40px; }
     .disk2 { width: 60px; }
     .disk3 { width: 80px; }
     .disk4 { width: 100px; }
-    #timer, #moves { font-size: 20px; margin-top: 10px; }
-    #message { font-size: 20px; margin-top: 10px; color: green; animation: fade 1s ease-in-out infinite alternate; }
+    #timer, #moves {
+      font-size: 20px;
+      margin-top: 10px;
+    }
+    #message {
+      font-size: 20px;
+      margin-top: 10px;
+      color: #28a745;
+      animation: fade 1s ease-in-out infinite alternate;
+    }
     @keyframes fade {
       from { opacity: 1; }
       to { opacity: 0.5; }
     }
-    #controls { margin-top: 10px; }
-    button { padding: 8px 16px; font-size: 16px; margin-top: 5px; }
+    #controls {
+      margin-top: 10px;
+    }
+    button {
+      padding: 8px 16px;
+      font-size: 16px;
+      margin-top: 5px;
+      background-color: #007aff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #005fcc;
+    }
   </style>
 </head>
 <body>
+  <img id="logo" src="C:\\Users\\thadikar\\arc.png" alt="Arcesium Logo">
   <h1>Tower of Hanoi - Complete in 60 Seconds!</h1>
   <div id="timer">Time: 60</div>
   <div id="moves">Moves: 0</div>
@@ -58,6 +117,7 @@
     let moveCount = 0;
     let interval;
     let draggedDisk = null;
+    let isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
     function setupGame() {
       pegs.forEach(peg => peg.innerHTML = "");
@@ -69,14 +129,16 @@
         const div = document.createElement("div");
         div.classList.add("disk", d.class);
         div.dataset.size = d.size;
-        div.setAttribute("draggable", true);
-        div.addEventListener("dragstart", handleDragStart);
+        div.setAttribute("draggable", !isTouch);
+        if (!isTouch) div.addEventListener("dragstart", handleDragStart);
+        if (isTouch) div.addEventListener("touchstart", handleTouchStart);
         pegs[0].appendChild(div);
       });
 
       pegs.forEach(peg => {
         peg.addEventListener("dragover", e => e.preventDefault());
         peg.addEventListener("drop", handleDrop);
+        if (isTouch) peg.addEventListener("touchend", handleTouchDrop);
       });
     }
 
@@ -107,6 +169,33 @@
       draggedDisk = null;
     }
 
+    function handleTouchStart(e) {
+      const disk = e.target;
+      const parent = disk.parentElement;
+      if (parent.lastElementChild === disk) {
+        draggedDisk = disk;
+        e.stopPropagation();
+      }
+    }
+
+    function handleTouchDrop(e) {
+      const peg = e.currentTarget;
+      if (!draggedDisk) return;
+
+      const targetTop = peg.lastElementChild;
+      const draggedSize = parseInt(draggedDisk.dataset.size);
+      const targetSize = targetTop ? parseInt(targetTop.dataset.size) : Infinity;
+
+      if (draggedSize < targetSize) {
+        peg.appendChild(draggedDisk);
+        moveCount++;
+        movesEl.textContent = `Moves: ${moveCount}`;
+        checkWin();
+      }
+
+      draggedDisk = null;
+    }
+
     function checkWin() {
       if (pegs[2].children.length === 4) {
         clearInterval(interval);
@@ -117,7 +206,10 @@
 
     function disableGame() {
       pegs.forEach(peg => peg.style.pointerEvents = "none");
-      document.querySelectorAll('.disk').forEach(d => d.setAttribute("draggable", false));
+      document.querySelectorAll('.disk').forEach(d => {
+        d.setAttribute("draggable", false);
+        d.removeEventListener("touchstart", handleTouchStart);
+      });
     }
 
     function startTimer() {
@@ -138,6 +230,7 @@
     function resetGame() {
       setupGame();
       startTimer();
+      pegs.forEach(peg => peg.style.pointerEvents = "auto");
     }
 
     // Initialize game on page load
