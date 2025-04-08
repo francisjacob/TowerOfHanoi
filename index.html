@@ -3,102 +3,145 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tower of Hanoi - 1 Minute Challenge</title>
+  <title>Tower of Hanoi - Drag & Drop (60s Challenge)</title>
   <style>
     body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
     h1 { margin: 10px; }
     #game { display: flex; gap: 30px; margin: 20px; }
-    .peg { width: 100px; height: 200px; background: #eee; display: flex; flex-direction: column-reverse; align-items: center; border: 2px solid #888; border-radius: 6px; padding: 10px; cursor: pointer; }
-    .disk { height: 20px; margin: 3px 0; background: steelblue; border-radius: 5px; }
+    .peg { width: 100px; height: 250px; background: #eee; display: flex; flex-direction: column-reverse; align-items: center; border: 2px solid #888; border-radius: 6px; padding: 10px; }
+    .disk { height: 20px; margin: 3px 0; background: steelblue; border-radius: 5px; cursor: grab; }
     .disk1 { width: 40px; }
     .disk2 { width: 60px; }
     .disk3 { width: 80px; }
-    #timer { font-size: 24px; margin-top: 10px; }
-    #message { font-size: 20px; margin-top: 10px; color: green; }
+    .disk4 { width: 100px; }
+    #timer, #moves { font-size: 20px; margin-top: 10px; }
+    #message { font-size: 20px; margin-top: 10px; color: green; animation: fade 1s ease-in-out infinite alternate; }
+    @keyframes fade {
+      from { opacity: 1; }
+      to { opacity: 0.5; }
+    }
+    #controls { margin-top: 10px; }
+    button { padding: 8px 16px; font-size: 16px; margin-top: 5px; }
   </style>
 </head>
 <body>
-  <h1>Tower of Hanoi - Complete in 1 Minute!</h1>
+  <h1>Tower of Hanoi - Complete in 60 Seconds!</h1>
   <div id="timer">Time: 60</div>
+  <div id="moves">Moves: 0</div>
   <div id="game">
     <div class="peg" id="peg1"></div>
     <div class="peg" id="peg2"></div>
     <div class="peg" id="peg3"></div>
   </div>
   <div id="message"></div>
+  <div id="controls">
+    <button onclick="resetGame()">Reset Game</button>
+  </div>
   <script>
-  const pegs = [
-    document.getElementById("peg1"),
-    document.getElementById("peg2"),
-    document.getElementById("peg3")
-  ];
+    const pegs = [
+      document.getElementById("peg1"),
+      document.getElementById("peg2"),
+      document.getElementById("peg3")
+    ];
+    const timerEl = document.getElementById("timer");
+    const messageEl = document.getElementById("message");
+    const movesEl = document.getElementById("moves");
 
-  // Initialize disks on peg1
-  const diskData = [
-    { class: "disk3", size: 3 },
-    { class: "disk2", size: 2 },
-    { class: "disk1", size: 1 }
-  ];
+    let diskData = [
+      { class: "disk4", size: 4 },
+      { class: "disk3", size: 3 },
+      { class: "disk2", size: 2 },
+      { class: "disk1", size: 1 }
+    ];
 
-  diskData.forEach(d => {
-    const div = document.createElement("div");
-    div.classList.add("disk", d.class);
-    div.dataset.size = d.size;
-    pegs[0].appendChild(div);
-  });
+    let timeLeft = 60;
+    let moveCount = 0;
+    let interval;
+    let draggedDisk = null;
 
-  let selectedDisk = null;
+    function setupGame() {
+      pegs.forEach(peg => peg.innerHTML = "");
+      messageEl.textContent = "";
+      moveCount = 0;
+      movesEl.textContent = `Moves: ${moveCount}`;
 
-  pegs.forEach(peg => {
-    peg.addEventListener("click", () => {
-      if (selectedDisk === null) {
-        const topDisk = peg.lastElementChild;
-        if (topDisk) {
-          selectedDisk = topDisk;
-          selectedDisk.style.border = "2px solid red";
-        }
+      diskData.forEach(d => {
+        const div = document.createElement("div");
+        div.classList.add("disk", d.class);
+        div.dataset.size = d.size;
+        div.setAttribute("draggable", true);
+        div.addEventListener("dragstart", handleDragStart);
+        pegs[0].appendChild(div);
+      });
+
+      pegs.forEach(peg => {
+        peg.addEventListener("dragover", e => e.preventDefault());
+        peg.addEventListener("drop", handleDrop);
+      });
+    }
+
+    function handleDragStart(e) {
+      const parent = e.target.parentElement;
+      if (parent.lastElementChild === e.target) {
+        draggedDisk = e.target;
       } else {
-        const targetTop = peg.lastElementChild;
-        const movingSize = parseInt(selectedDisk.dataset.size);
-        const targetSize = targetTop ? parseInt(targetTop.dataset.size) : Infinity;
-
-        if (movingSize < targetSize) {
-          selectedDisk.style.border = "none";
-          peg.appendChild(selectedDisk);
-          checkWin();
-        } else {
-          selectedDisk.style.border = "none";
-          // Optional: Add feedback if move is invalid
-        }
-        selectedDisk = null;
+        e.preventDefault();
       }
-    });
-  });
-
-  // Timer logic
-  let timeLeft = 60;
-  const timer = document.getElementById("timer");
-  const interval = setInterval(() => {
-    timeLeft--;
-    timer.textContent = `Time: ${timeLeft}`;
-    if (timeLeft <= 0) {
-      clearInterval(interval);
-      document.getElementById("message").textContent = "Time's up! Try again.";
-      disableGame();
     }
-  }, 1000);
 
-  function checkWin() {
-    if (pegs[2].children.length === 3) {
-      clearInterval(interval);
-      document.getElementById("message").textContent = "You won with time to spare! 🎉";
-      disableGame();
+    function handleDrop(e) {
+      const peg = e.currentTarget;
+      if (!draggedDisk) return;
+
+      const targetTop = peg.lastElementChild;
+      const draggedSize = parseInt(draggedDisk.dataset.size);
+      const targetSize = targetTop ? parseInt(targetTop.dataset.size) : Infinity;
+
+      if (draggedSize < targetSize) {
+        peg.appendChild(draggedDisk);
+        moveCount++;
+        movesEl.textContent = `Moves: ${moveCount}`;
+        checkWin();
+      }
+
+      draggedDisk = null;
     }
-  }
 
-  function disableGame() {
-    pegs.forEach(peg => peg.style.pointerEvents = "none");
-  }
+    function checkWin() {
+      if (pegs[2].children.length === 4) {
+        clearInterval(interval);
+        messageEl.textContent = "🎉 Congratulations! You solved it! 🎉";
+        disableGame();
+      }
+    }
+
+    function disableGame() {
+      pegs.forEach(peg => peg.style.pointerEvents = "none");
+      document.querySelectorAll('.disk').forEach(d => d.setAttribute("draggable", false));
+    }
+
+    function startTimer() {
+      clearInterval(interval);
+      timeLeft = 60;
+      timerEl.textContent = `Time: ${timeLeft}`;
+      interval = setInterval(() => {
+        timeLeft--;
+        timerEl.textContent = `Time: ${timeLeft}`;
+        if (timeLeft <= 0) {
+          clearInterval(interval);
+          messageEl.textContent = "Time's up! Try again.";
+          disableGame();
+        }
+      }, 1000);
+    }
+
+    function resetGame() {
+      setupGame();
+      startTimer();
+    }
+
+    // Initialize game on page load
+    resetGame();
   </script>
 </body>
 </html>
